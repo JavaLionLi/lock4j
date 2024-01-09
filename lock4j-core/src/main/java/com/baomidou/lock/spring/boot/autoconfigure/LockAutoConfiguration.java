@@ -16,21 +16,19 @@
 
 package com.baomidou.lock.spring.boot.autoconfigure;
 
-import com.baomidou.lock.DefaultLockFailureStrategy;
-import com.baomidou.lock.DefaultLockKeyBuilder;
-import com.baomidou.lock.LockFailureStrategy;
-import com.baomidou.lock.LockKeyBuilder;
-import com.baomidou.lock.LockTemplate;
+import com.baomidou.lock.*;
 import com.baomidou.lock.aop.LockAnnotationAdvisor;
 import com.baomidou.lock.aop.LockInterceptor;
 import com.baomidou.lock.executor.LockExecutor;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Role;
 import org.springframework.core.Ordered;
 
 import java.util.List;
@@ -40,13 +38,16 @@ import java.util.List;
  *
  * @author zengzhihong TaoYu
  */
-@Configuration
+@Role(BeanDefinition.ROLE_INFRASTRUCTURE)
+@Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(Lock4jProperties.class)
-@RequiredArgsConstructor
 public class LockAutoConfiguration {
 
-    private final Lock4jProperties properties;
+    @Lazy
+    @Autowired
+    private Lock4jProperties properties;
 
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     @SuppressWarnings("rawtypes")
     @Bean
     @ConditionalOnMissingBean
@@ -57,25 +58,29 @@ public class LockAutoConfiguration {
         return lockTemplate;
     }
 
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     @Bean
     @ConditionalOnMissingBean
     public LockKeyBuilder lockKeyBuilder(BeanFactory beanFactory) {
         return new DefaultLockKeyBuilder(beanFactory);
     }
 
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     @Bean
     @ConditionalOnMissingBean
     public LockFailureStrategy lockFailureStrategy() {
         return new DefaultLockFailureStrategy();
     }
 
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     @Bean
     @ConditionalOnMissingBean
-    public LockInterceptor lockInterceptor(@Lazy LockTemplate lockTemplate, List<LockKeyBuilder> keyBuilders,
-                                           List<LockFailureStrategy> failureStrategies) {
-        return new LockInterceptor(lockTemplate, keyBuilders, failureStrategies, properties);
+    public LockInterceptor lockInterceptor(@Lazy LockTemplate lockTemplate, LockKeyBuilder lockKeyBuilder,
+                                           LockFailureStrategy lockFailureStrategy) {
+        return new LockInterceptor(lockTemplate, lockKeyBuilder, lockFailureStrategy, properties);
     }
 
+    @Role(BeanDefinition.ROLE_INFRASTRUCTURE)
     @Bean
     @ConditionalOnMissingBean
     public LockAnnotationAdvisor lockAnnotationAdvisor(LockInterceptor lockInterceptor) {
